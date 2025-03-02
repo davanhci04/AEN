@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+        }
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        input:focus {
+            border-color: #6e8efb;
+            box-shadow: 0 0 8px rgba(110, 142, 251, 0.5);
+        }
+        label {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            font-size: 16px;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+        input:focus + label,
+        input:not(:placeholder-shown) + label {
+            top: -10px;
+            left: 10px;
+            font-size: 12px;
+            color: #6e8efb;
+            background: #fff;
+            padding: 0 5px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #6e8efb, #a777e3);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(110, 142, 251, 0.4);
+        }
+        #error-message {
+            color: #e63946;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Đăng nhập</h2>
+        <div class="input-group">
+            <input type="text" id="acc" placeholder=" " required>
+            <label>Tên tài khoản</label>
+        </div>
+        <div class="input-group">
+            <input type="password" id="passAcc" placeholder=" " required>
+            <label>Mật khẩu</label>
+        </div>
+        <button onclick="login()">Đăng nhập</button>
+        <p id="error-message"></p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyByDFV6Wm3mLriHyuV9-3Z2_xeXLJtKD9Y",
+            authDomain: "henhung-82bcc.firebaseapp.com",
+            databaseURL: "https://henhung-82bcc-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "henhung-82bcc",
+            storageBucket: "henhung-82bcc.firebasestorage.app",
+            messagingSenderId: "889326845777",
+            appId: "1:889326845777:web:431c026ad53570bdd75d70",
+            measurementId: "G-WMTG0D0239"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.login = async function() {
+          const acc = document.getElementsByClassName("acc").value;
+          const passAcc = document.getElementsByClassName("passAcc").value;
+          const errorMessage = document.getElementById("error-message");
+
+          try {
+              const usersRef = ref(db, "users");
+              const snapshot = await get(usersRef);
+
+              if (snapshot.exists()) {
+                  let found = false;
+                  snapshot.forEach((childSnapshot) => {
+                      const userData = childSnapshot.val();
+                      if (userData.acc === acc && userData.pasAcc === passAcc) {
+                          found = true;
+                      }
+                  });
+
+                  if (found) {
+                      window.location.href = "client.html"; // Chuyển hướng nếu đăng nhập thành công
+                  } else {
+                      errorMessage.textContent = "Tài khoản hoặc mật khẩu không đúng!";
+                  }
+              } else {
+                  errorMessage.textContent = "Không tìm thấy dữ liệu!";
+              }
+          } catch (error) {
+              errorMessage.textContent = "Lỗi: " + error.message;
+          }
+      };
+
+    </script>
+</body>
+</html>

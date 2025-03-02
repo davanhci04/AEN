@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điều Khiển Cửa - Firebase</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .status-box {
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      background-color: #f9f9f9;
+    }
+    .status-box i {
+      margin-right: 8px;
+    }
+    .btn-primary, .btn-success {
+      width: 100%;
+      margin-top: 10px;
+    }
+    .door-status {
+      font-size: 1.2em;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .custom-switch {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    .custom-switch input[type="checkbox"] {
+      display: none;
+    }
+    .switch-label {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #007bff;
+    }
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+    .timer {
+      font-size: 0.9em;
+      color: #ff5722;
+      margin-left: 10px;
+    }
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        padding: 15px;
+      }
+      .status-box {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Điều Khiển Cửa</h2>
+
+    <div class="status-box">
+      <i class="fas fa-key text-primary"></i>
+      <span id="currentPassword">Mật khẩu hiện tại: Đang tải...</span>
+    </div>
+    <div class="status-box">
+      <i class="fas fa-lock text-success"></i>
+      <span id="currentOTP">OTP hiện tại: Chưa tạo</span>
+      <span id="otpTimer" class="timer"></span>
+    </div>
+
+    <div class="door-status">
+      Trạng thái cửa: <span id="doorStateText">Đang tải...</span>
+    </div>
+    <div class="custom-switch">
+      <label class="switch-label">
+        <input type="checkbox" id="doorToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#passwordModal">Đổi Mật Khẩu</button>
+    <button class="btn btn-success" id="generateOTPBtn">Tạo OTP</button>
+  </div>
+
+  <!-- Modal đổi mật khẩu -->
+  <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="passwordModalLabel">Đổi Mật Khẩu</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newPasswordModal" class="form-label">Mật khẩu mới (4 chữ số):</label>
+            <input type="number" id="newPasswordModal" class="form-control" placeholder="Nhập mật khẩu mới" maxlength="4">
+          </div>
+          <div class="form-group">
+            <label for="confirmPasswordModal" class="form-label">Xác nhận mật khẩu:</label>
+            <input type="number" id="confirmPasswordModal" class="form-control" placeholder="Xác nhận mật khẩu" maxlength="4">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="button" class="btn btn-primary" id="savePasswordBtn">Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal thông báo -->
+  <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="messageModalLabel">Thông Báo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+        </div>
+        <div class="modal-body">
+          <p id="messageText"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyByDFV6Wm3mLriHyuV9-3Z2_xeXLJtKD9Y",
+      authDomain: "henhung-82bcc.firebaseapp.com",
+      databaseURL: "https://henhung-82bcc-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "henhung-82bcc",
+      storageBucket: "henhung-82bcc.firebasestorage.app",
+      messagingSenderId: "889326845777",
+      appId: "1:889326845777:web:431c026ad53570bdd75d70",
+      measurementId: "G-WMTG0D0239"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const database = getDatabase(app);
+    const passwordRef = ref(database, '/password');
+    const doorStateRef = ref(database, '/doorState');
+    const otpRef = ref(database, '/otp');
+    const otpExpirationRef = ref(database, '/otpExpiration');
+
+    // Thời gian tồn tại OTP (giây)
+    const OTP_EXPIRATION_TIME = 300; // 5 phút
+
+    // Hàm hiển thị modal thông báo
+    function showMessage(text, type) {
+      const messageText = document.getElementById('messageText');
+      const messageModal = new bootstrap.Modal(document.getElementById('messageModal'));
+      messageText.textContent = text;
+      messageText.className = type === 'success' ? 'text-success' : 'text-danger';
+      messageModal.show();
+    }
+
+    // Hiển thị mật khẩu hiện tại
+    function initializePassword() {
+      onValue(passwordRef, (snapshot) => {
+        const password = snapshot.val();
+        const currentPassword = document.getElementById('currentPassword');
+        currentPassword.textContent = password ? `Mật khẩu hiện tại: ${password}` : 'Mật khẩu hiện tại: Chưa đặt';
+      }, (error) => showMessage('Lỗi đọc mật khẩu: ' + error.message, 'error'));
+    }
+
+    // Hiển thị OTP và đếm ngược
+    let countdownInterval = null;
+    function initializeOTP() {
+      onValue(otpRef, (snapshot) => {
+        const otp = snapshot.val();
+        const currentOTP = document.getElementById('currentOTP');
+        currentOTP.textContent = otp ? `OTP hiện tại: ${otp}` : 'OTP hiện tại: Chưa tạo';
+      });
+
+      onValue(otpExpirationRef, (snapshot) => {
+        const expirationTime = snapshot.val();
+        const otpTimer = document.getElementById('otpTimer');
+        if (expirationTime) {
+          clearInterval(countdownInterval);
+          countdownInterval = setInterval(() => {
+            const now = Date.now();
+            const timeLeft = Math.max(0, Math.floor((expirationTime - now) / 1000));
+            otpTimer.textContent = `(Hết hạn sau: ${timeLeft}s)`;
+            if (timeLeft === 0) {
+              clearInterval(countdownInterval);
+              set(otpRef, null);
+              set(otpExpirationRef, null);
+              otpTimer.textContent = '';
+            }
+          }, 1000);
+        } else {
+          clearInterval(countdownInterval);
+          otpTimer.textContent = '';
+        }
+      });
+    }
+
+    // Hiển thị trạng thái cửa
+    function initializeDoorStatus() {
+      onValue(doorStateRef, (snapshot) => {
+        const doorState = snapshot.val();
+        const doorStateText = document.getElementById('doorStateText');
+        const doorToggle = document.getElementById('doorToggle');
+        if (doorState === true) {
+          doorStateText.textContent = 'Mở';
+          doorStateText.className = 'text-success';
+          doorToggle.checked = true;
+        } else if (doorState === false) {
+          doorStateText.textContent = 'Đóng';
+          doorStateText.className = 'text-danger';
+          doorToggle.checked = false;
+        } else {
+          doorStateText.textContent = 'Không xác định';
+          doorStateText.className = 'text-warning';
+          doorToggle.checked = false;
+          set(doorStateRef, false);
+        }
+      }, (error) => showMessage('Lỗi đọc trạng thái cửa: ' + error.message, 'error'));
+    }
+
+    // Toggle trạng thái cửa
+    function toggleDoor() {
+      const doorToggle = document.getElementById('doorToggle');
+      const newState = doorToggle.checked;
+      const doorStateText = document.getElementById('doorStateText');
+      doorStateText.textContent = newState ? 'Mở' : 'Đóng';
+      doorStateText.className = newState ? 'text-success' : 'text-danger';
+      set(doorStateRef, newState).catch((error) => {
+        showMessage('Lỗi chuyển trạng thái cửa: ' + error.message, 'error');
+        doorToggle.checked = !newState;
+        doorStateText.textContent = !newState ? 'Mở' : 'Đóng';
+        doorStateText.className = !newState ? 'text-success' : 'text-danger';
+      });
+    }
+
+    // Đổi mật khẩu từ modal
+    function changePasswordFromModal() {
+      const newPassword = document.getElementById('newPasswordModal').value;
+      const confirmPassword = document.getElementById('confirmPasswordModal').value;
+      if (newPassword.length !== 4 || confirmPassword.length !== 4) {
+        showMessage('Mật khẩu phải là 4 chữ số!', 'error');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showMessage('Mật khẩu không khớp!', 'error');
+        return;
+      }
+      set(passwordRef, parseInt(newPassword))
+        .then(() => {
+          showMessage('Đổi mật khẩu thành công!', 'success');
+          bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+          document.getElementById('newPasswordModal').value = '';
+          document.getElementById('confirmPasswordModal').value = '';
+        })
+        .catch((error) => showMessage('Lỗi đổi mật khẩu: ' + error.message, 'error'));
+    }
+
+    // Tạo OTP ngẫu nhiên
+    function generateOTP() {
+      const otp = Math.floor(1000 + Math.random() * 9000);
+      const expirationTime = Date.now() + OTP_EXPIRATION_TIME * 200;
+      Promise.all([
+        set(otpRef, otp),
+        set(otpExpirationRef, expirationTime)
+      ])
+        .then(() => showMessage(`Đã tạo OTP thành công: ${otp}`, 'success'))
+        .catch((error) => showMessage('Lỗi tạo OTP: ' + error.message, 'error'));
+    }
+
+    // Gắn sự kiện
+    document.getElementById('savePasswordBtn').addEventListener('click', changePasswordFromModal);
+    document.getElementById('generateOTPBtn').addEventListener('click', generateOTP);
+    document.getElementById('doorToggle').addEventListener('change', toggleDoor);
+
+    // Khởi tạo khi tải trang
+    window.onload = () => {
+      initializeDoorStatus();
+      initializePassword();
+      initializeOTP();
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
